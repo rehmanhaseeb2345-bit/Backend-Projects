@@ -11,12 +11,6 @@ const registerUser = asyncHandler(async (req, res) => {
   const trimmedEmail = email?.trim().toLowerCase();
   const trimmedUsername = username?.trim().toLowerCase();
 
-  if (
-    [fullname, email, username, password].some((field) => field?.trim() === "")
-  ) {
-    throw new ApiError(400, "All Fields are required");
-  }
-
   const isUserAlreadyExist = await User.findOne({
     $or: [
       {
