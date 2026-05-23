@@ -40,13 +40,7 @@ const registerUser = asyncHandler(async (req, res) => {
     username,
   });
 
-  const createdUser = await User.findById(user._id).select(
-    "-password -refreshToken",
-  );
-
-  if (!createdUser) {
-    throw new ApiError(500, "Something went wrong while registering user");
-  }
+  const { password: _, refreshToken: __, ...createdUser } = user.toObject();
 
   return res
     .status(201)
