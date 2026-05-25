@@ -7,15 +7,34 @@ import {
   deleteFromCloudinary,
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { logger } from "../utils/logger.js";
+
+const generateAccessAndRefreshTokens = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    const accessToken = user.generateAccessToken();
+    const refreshToken = user.generateRefreshToken();
+
+    user.refreshToken = refreshToken;
+
+    await user.save({ validateBeforeSave: false });
+    return { accessToken, refreshToken };
+  } catch (error) {
+    console.error("Token generation failed:", error);
+    throw new ApiError(
+      500,
+      "Something went wrong while generating auth tokens",
+    );
+  }
+};
 
 const cleanupRequestFiles = (req) => {
-  if (req.files) {
+  if (!req.files) return Promise.resolve();
+  return Promise.all(
     Object.values(req.files)
       .flat()
-      .forEach((file) => {
-        if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
-      });
-  }
+      .map((file) => fs.promises.unlink(file.path).catch(() => {})),
+  );
 };
 
 const registerUser = asyncHandler(async (req, res) => {
@@ -26,7 +45,7 @@ const registerUser = asyncHandler(async (req, res) => {
   });
 
   if (isUserAlreadyExist) {
-    cleanupRequestFiles(req);
+    await cleanupRequestFiles(req);
     throw new ApiError(409, "Email or username already in use");
   }
 
@@ -35,7 +54,7 @@ const registerUser = asyncHandler(async (req, res) => {
   const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
 
   if (!avatarLocalPath) {
-    cleanupRequestFiles(req);
+    await cleanupRequestFiles(req);
     throw new ApiError(400, "Avatar file is required");
   }
 
@@ -50,7 +69,6 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Avatar upload failed");
   }
 
-  // 4. Create user — clean up Cloudinary assets if this fails
   let user;
   try {
     user = await User.create({
@@ -78,4 +96,74 @@ const registerUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, createdUser, "User Registered Successfully"));
 });
 
-export { registerUser };
+const loginUser = asyncHandler(async (req, res) => {
+  const { username, email, password } = req.body;
+
+  const user = await User.findOne(
+    { $or: [{ email }, { username }] },
+    {
+      password: 1,
+      refreshToken: 1,
+      email: 1,
+      username: 1,
+      fullname: 1,
+      avatar: 1,
+      coverImage: 1,
+    },
+  );
+
+  if (!user) {
+    logger.warn("login_failed", { reason: "user_not_found", ip: req.ip });
+    throw new ApiError(401, "Invalid Credentials");
+  }
+
+  const isPasswordValid = await user.isPasswordCorrect(password);
+  if (!isPasswordValid) {
+    logger.warn("login_failed", { reason: "invalid_password", userId: String(user._id), ip: req.ip });
+    throw new ApiError(401, "Invalid Credentials");
+  }
+
+  const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+    user._id,
+  );
+
+  const loggedInUser = user.toObject();
+
+  delete loggedInUser.password;
+  delete loggedInUser.refreshToken;
+
+  logger.info("login_success", {
+    userId: String(loggedInUser._id),
+    ip: req.ip,
+    userAgent: req.headers["user-agent"],
+  });
+
+  const options = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  };
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, {
+      ...options,
+      maxAge: 15 * 60 * 1000,
+    })
+    .cookie("refreshToken", refreshToken, {
+      ...options,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    })
+    .json(
+      new ApiResponse(
+        200,
+        {
+          user: loggedInUser,
+          accessToken,
+          refreshToken,
+        },
+        "User logged in successfully",
+      ),
+    );
+});
+
+export { registerUser, loginUser };

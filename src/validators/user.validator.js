@@ -34,3 +34,22 @@ export const registerUserSchema = z.object({
       "Password must contain at least one number and one special character (!@#$%^&*)",
     ),
 });
+
+export const loginUserSchema = z
+  .object({
+    username: z.string().trim().toLowerCase().optional(),
+
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .email("Invalid email address format")
+      .optional(),
+
+    password: z
+      .string({ required_error: "Password is required" })
+      .min(1, "Password cannot be empty"),
+  })
+  .refine((data) => data.username || data.email, {
+    message: "Please provide either a valid username or email address",
+  });

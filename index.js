@@ -9,6 +9,20 @@ dotenv.config({
   path: "./.env",
 });
 
+const REQUIRED_ENV = [
+  "MONGODB_URI",
+  "CORS_ORIGIN",
+  "ACCESS_TOKEN_SECRET",
+  "ACCESS_TOKEN_EXPIRY",
+  "REFRESH_TOKEN_SECRET",
+  "REFRESH_TOKEN_EXPIRY",
+];
+const missingEnv = REQUIRED_ENV.filter((key) => !process.env[key]);
+if (missingEnv.length) {
+  console.error(`[STARTUP] Missing required environment variables: ${missingEnv.join(", ")}`);
+  process.exit(1);
+}
+
 const PORT = process.env.PORT || 3000;
 
 connectToDB()
