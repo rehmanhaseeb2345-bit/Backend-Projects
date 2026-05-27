@@ -119,7 +119,11 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const isPasswordValid = await user.isPasswordCorrect(password);
   if (!isPasswordValid) {
-    logger.warn("login_failed", { reason: "invalid_password", userId: String(user._id), ip: req.ip });
+    logger.warn("login_failed", {
+      reason: "invalid_password",
+      userId: String(user._id),
+      ip: req.ip,
+    });
     throw new ApiError(401, "Invalid Credentials");
   }
 
@@ -166,4 +170,30 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 });
 
-export { registerUser, loginUser };
+const logoutUser = asyncHandler(async (req, res) => {
+  User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        refreshToken: undefined,
+      },
+    },
+    {
+      new: true,
+    },
+  );
+
+  const options = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  };
+
+  return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User Logged out"));
+});
+
+export { registerUser, loginUser, logoutUser };
