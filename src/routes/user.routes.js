@@ -1,7 +1,7 @@
 import { Router } from "express";
 import {
   registerUser,
-  loginuser,
+  loginUser,
   logoutUser,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multure.middleware.js";
@@ -30,7 +30,7 @@ router.post(
   registerUser,
 );
 
-router.post("/login", validateMiddleware(loginUserSchema), loginuser);
+router.post("/login", validateMiddleware(loginUserSchema), loginUser);
 
 // Secured Routes
 
