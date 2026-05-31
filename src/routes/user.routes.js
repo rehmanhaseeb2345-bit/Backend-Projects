@@ -3,6 +3,7 @@ import {
   registerUser,
   loginUser,
   logoutUser,
+  refreshAccessToken,
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multure.middleware.js";
 import { validateMiddleware } from "../middlewares/validate.middleware.js";
@@ -35,5 +36,6 @@ router.post("/login", validateMiddleware(loginUserSchema), loginUser);
 // Secured Routes
 
 router.post("/logout", verifyJWT, logoutUser);
+router.post("/refresh-token", refreshAccessToken);
 
 export default router;
