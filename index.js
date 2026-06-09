@@ -1,13 +1,12 @@
+import "dotenv/config";
 import dns from "node:dns";
-dns.setServers(["8.8.8.8", "1.1.1.1"]);
-
+import fs from "fs";
 import app from "./src/app.js";
-import dotenv from "dotenv";
 import connectToDB from "./src/db/db.js";
 
-dotenv.config({
-  path: "./.env",
-});
+dns.setServers(["8.8.8.8", "1.1.1.1"]);
+
+fs.mkdirSync("./public/temp", { recursive: true });
 
 const REQUIRED_ENV = [
   "MONGODB_URI",
@@ -16,10 +15,15 @@ const REQUIRED_ENV = [
   "ACCESS_TOKEN_EXPIRY",
   "REFRESH_TOKEN_SECRET",
   "REFRESH_TOKEN_EXPIRY",
+  "CLOUDINARY_CLOUD_NAME",
+  "CLOUDINARY_API_KEY",
+  "CLOUDINARY_API_SECRET",
 ];
 const missingEnv = REQUIRED_ENV.filter((key) => !process.env[key]);
 if (missingEnv.length) {
-  console.error(`[STARTUP] Missing required environment variables: ${missingEnv.join(", ")}`);
+  console.error(
+    `[STARTUP] Missing required environment variables: ${missingEnv.join(", ")}`,
+  );
   process.exit(1);
 }
 

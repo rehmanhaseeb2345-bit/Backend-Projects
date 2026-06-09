@@ -1,6 +1,7 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import userRouter from "./routes/user.routes.js";
 
 const app = express();
 
@@ -15,8 +16,15 @@ app.use(
 app.use(express.static("public"));
 app.use(cookieParser());
 
-import userRouter from "./routes/user.routes.js";
 app.use("/api/v1", userRouter);
+
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    statusCode: 404,
+    message: `Route ${req.method} ${req.originalUrl} not found`,
+  });
+});
 
 app.use((err, req, res, next) => {
   console.error("[ERROR]", err.message);

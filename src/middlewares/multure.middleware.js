@@ -1,5 +1,6 @@
 import multer from "multer";
 import path from "path";
+import { ApiError } from "../utils/ApiError.js";
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -19,7 +20,7 @@ const fileFilter = (req, file, cb) => {
   ];
 
   if (!allowedMimeTypes.includes(file.mimetype)) {
-    return cb(new Error("Invalid file type. Only images are allowed."), false);
+    return cb(new ApiError(400, "Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed."), false);
   }
 
   cb(null, true);

@@ -28,7 +28,6 @@ export const registerUserSchema = z.object({
     .string({ required_error: "Password is required" })
     .min(8, "Password must be at least 8 characters")
     .max(64, "Password cannot exceed 64 characters")
-    // Optional: Require at least one number and one special character
     .regex(
       /^(?=.*[0-9])(?=.*[!@#$%^&*])/,
       "Password must contain at least one number and one special character (!@#$%^&*)",
@@ -52,4 +51,43 @@ export const loginUserSchema = z
   })
   .refine((data) => data.username || data.email, {
     message: "Please provide either a valid username or email address",
+    path: ["email"],
   });
+
+export const changeCurrentPasswordSchema = z
+  .object({
+    oldPassword: z
+      .string({ required_error: "Old password is required" })
+      .min(1, "Old password cannot be empty"),
+
+    newPassword: z
+      .string({ required_error: "New password is required" })
+      .min(8, "Password must be at least 8 characters")
+      .max(64, "Password cannot exceed 64 characters")
+      .regex(
+        /^(?=.*[0-9])(?=.*[!@#$%^&*])/,
+        "Password must contain at least one number and one special character (!@#$%^&*)",
+      ),
+
+    confirmPassword: z.string({
+      required_error: "Confirm password is required",
+    }),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export const updateAccountDetailsSchema = z.object({
+  fullname: z
+    .string({ required_error: "Full name is required" })
+    .trim()
+    .min(3, "Full name must be at least 3 characters")
+    .max(50, "Full name cannot exceed 50 characters"),
+
+  email: z
+    .string({ required_error: "Email is required" })
+    .trim()
+    .toLowerCase()
+    .email("Invalid email address format"),
+});

@@ -1,7 +1,6 @@
-import mongoose, { model } from "mongoose";
-import { Schema } from "zod/v3";
+import mongoose, { Schema } from "mongoose";
 
-const subcriptionSchema = new mongoose.Schema(
+const subscriptionSchema = new mongoose.Schema(
   {
     subscriber: {
       type: Schema.Types.ObjectId,
@@ -15,4 +14,4 @@ const subcriptionSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-export const Subscription = mongoose.model("Subscription", subcriptionSchema);
+export const Subscription = mongoose.model("Subscription", subscriptionSchema);
