@@ -1,15 +1,6 @@
 import { z } from "zod";
-import fs from "fs";
 import { ApiError } from "../utils/ApiError.js";
-
-const cleanupRequestFiles = (req) => {
-  if (!req.files) return Promise.resolve();
-  return Promise.all(
-    Object.values(req.files)
-      .flat()
-      .map((file) => fs.promises.unlink(file.path).catch(() => {})),
-  );
-};
+import { cleanupRequestFiles } from "../utils/fileCleanup.js";
 
 const validate = (schema) => async (req, res, next) => {
   try {

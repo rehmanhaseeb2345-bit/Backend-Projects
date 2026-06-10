@@ -1,4 +1,3 @@
-import fs from "fs";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
@@ -8,9 +7,8 @@ import {
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { logger } from "../utils/logger.js";
+import { cleanupRequestFiles } from "../utils/fileCleanup.js";
 import jwt from "jsonwebtoken";
-import { use } from "react";
-import { subscribe } from "diagnostics_channel";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -29,15 +27,6 @@ const generateAccessAndRefreshTokens = async (userId) => {
       "Something went wrong while generating auth tokens",
     );
   }
-};
-
-const cleanupRequestFiles = (req) => {
-  if (!req.files) return Promise.resolve();
-  return Promise.all(
-    Object.values(req.files)
-      .flat()
-      .map((file) => fs.promises.unlink(file.path).catch(() => {})),
-  );
 };
 
 const registerUser = asyncHandler(async (req, res) => {
@@ -100,8 +89,12 @@ const registerUser = asyncHandler(async (req, res) => {
 const loginUser = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
 
+  const orConditions = [];
+  if (email) orConditions.push({ email });
+  if (username) orConditions.push({ username });
+
   const user = await User.findOne(
-    { $or: [{ email }, { username }] },
+    { $or: orConditions },
     {
       password: 1,
       refreshToken: 1,
@@ -175,8 +168,8 @@ const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        refreshToken: undefined,
+      $unset: {
+        refreshToken: 1,
       },
     },
     {
@@ -392,18 +385,16 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     {
       $addFields: {
         subscribersCount: {
-          $size: "subscribers",
+          $size: "$subscribers",
         },
         channelsSubscribedToCount: {
-          $size: "subscribedTo",
+          $size: "$subscribedTo",
         },
         isSubscribed: {
           $cond: {
-            if: {
-              $in: [req.user?._id, "$subscribers.subscriber"],
-              then: true,
-              else: false,
-            },
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] },
+            then: true,
+            else: false,
           },
         },
       },
