@@ -1,11 +1,14 @@
 import { z } from "zod";
+import { sanitizedString } from "../utils/sanitize.js";
 
 export const registerUserSchema = z.object({
-  fullname: z
-    .string({ required_error: "Full name is required" })
-    .trim()
-    .min(3, "Full name must be at least 3 characters")
-    .max(50, "Full name cannot exceed 50 characters"),
+  fullname: sanitizedString({
+    requiredError: "Full name is required",
+    min: 3,
+    minError: "Full name must be at least 3 characters",
+    max: 50,
+    maxError: "Full name cannot exceed 50 characters",
+  }),
 
   username: z
     .string({ required_error: "Username is required" })
@@ -79,11 +82,13 @@ export const changeCurrentPasswordSchema = z
   });
 
 export const updateAccountDetailsSchema = z.object({
-  fullname: z
-    .string({ required_error: "Full name is required" })
-    .trim()
-    .min(3, "Full name must be at least 3 characters")
-    .max(50, "Full name cannot exceed 50 characters"),
+  fullname: sanitizedString({
+    requiredError: "Full name is required",
+    min: 3,
+    minError: "Full name must be at least 3 characters",
+    max: 50,
+    maxError: "Full name cannot exceed 50 characters",
+  }),
 
   email: z
     .string({ required_error: "Email is required" })

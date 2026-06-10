@@ -6,6 +6,7 @@ import { Tweet } from "../models/tweet.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { getPaginationOptions } from "../utils/pagination.js";
 
 const toggleVideoLike = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
@@ -149,8 +150,6 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 });
 
 const getLikedVideos = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-
   const pipeline = [
     { $match: { likedBy: req.user._id, video: { $exists: true } } },
     { $sort: { createdAt: -1 } },
@@ -181,10 +180,7 @@ const getLikedVideos = asyncHandler(async (req, res) => {
     { $replaceRoot: { newRoot: "$video" } },
   ];
 
-  const options = {
-    page: Math.max(1, parseInt(page, 10) || 1),
-    limit: Math.min(50, Math.max(1, parseInt(limit, 10) || 10)),
-  };
+  const options = getPaginationOptions(req.query);
 
   const result = await Like.aggregatePaginate(Like.aggregate(pipeline), options);
 

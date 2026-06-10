@@ -12,6 +12,7 @@ import {
   deleteFromCloudinary,
 } from "../utils/cloudinary.js";
 import { cleanupRequestFiles } from "../utils/fileCleanup.js";
+import { getPaginationOptions } from "../utils/pagination.js";
 
 const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -74,8 +75,6 @@ const publishAVideo = asyncHandler(async (req, res) => {
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const {
-    page = 1,
-    limit = 10,
     query,
     sortBy = "createdAt",
     sortType = "desc",
@@ -118,10 +117,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
     { $unwind: "$owner" },
   ];
 
-  const options = {
-    page: Math.max(1, parseInt(page, 10) || 1),
-    limit: Math.min(50, Math.max(1, parseInt(limit, 10) || 10)),
-  };
+  const options = getPaginationOptions(req.query);
 
   const result = await Video.aggregatePaginate(
     Video.aggregate(pipeline),

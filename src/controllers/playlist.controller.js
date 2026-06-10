@@ -5,6 +5,7 @@ import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { getPaginationOptions } from "../utils/pagination.js";
 
 const createPlaylist = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
@@ -33,7 +34,7 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found");
   }
 
-  const playlists = await Playlist.aggregate([
+  const pipeline = [
     { $match: { owner: new mongoose.Types.ObjectId(userId) } },
     { $addFields: { videoCount: { $size: "$videos" } } },
     {
@@ -47,11 +48,18 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
       },
     },
     { $sort: { createdAt: -1 } },
-  ]);
+  ];
+
+  const options = getPaginationOptions(req.query);
+
+  const result = await Playlist.aggregatePaginate(
+    Playlist.aggregate(pipeline),
+    options,
+  );
 
   return res
     .status(200)
-    .json(new ApiResponse(200, playlists, "Playlists fetched successfully"));
+    .json(new ApiResponse(200, result, "Playlists fetched successfully"));
 });
 
 const getPlaylistById = asyncHandler(async (req, res) => {

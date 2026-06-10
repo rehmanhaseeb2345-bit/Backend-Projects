@@ -155,8 +155,6 @@ const loginUser = asyncHandler(async (req, res) => {
         200,
         {
           user: loggedInUser,
-          accessToken,
-          refreshToken,
         },
         "User logged in successfully",
       ),
@@ -209,6 +207,11 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 
   if (incommingRefreshToken !== user?.refreshToken) {
+    // Reuse of an old/rotated-out refresh token suggests the stored token may
+    // have been compromised. Revoke it so the legitimate session is also
+    // forced to re-authenticate.
+    user.refreshToken = undefined;
+    await user.save({ validateBeforeSave: false });
     throw new ApiError(401, "Refresh Token is expired or used");
   }
 
@@ -219,13 +222,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     .status(200)
     .cookie("accessToken", accessToken, getAccessTokenCookieOptions())
     .cookie("refreshToken", newRefreshToken, getRefreshTokenCookieOptions())
-    .json(
-      new ApiResponse(
-        200,
-        { accessToken, refreshToken: newRefreshToken },
-        "Access token Refreshed",
-      ),
-    );
+    .json(new ApiResponse(200, {}, "Access token Refreshed"));
 });
 
 const changeCurrentPassword = asyncHandler(async (req, res) => {

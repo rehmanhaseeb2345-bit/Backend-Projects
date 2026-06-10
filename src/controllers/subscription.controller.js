@@ -4,6 +4,7 @@ import { Subscription } from "../models/subscription.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { getPaginationOptions } from "../utils/pagination.js";
 
 const toggleSubscription = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
@@ -60,7 +61,6 @@ const toggleSubscription = asyncHandler(async (req, res) => {
 
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
-  const { page = 1, limit = 10 } = req.query;
 
   if (!isValidObjectId(channelId)) {
     throw new ApiError(400, "Invalid channel id");
@@ -93,10 +93,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     },
   ];
 
-  const options = {
-    page: Math.max(1, parseInt(page, 10) || 1),
-    limit: Math.min(50, Math.max(1, parseInt(limit, 10) || 10)),
-  };
+  const options = getPaginationOptions(req.query);
 
   const result = await Subscription.aggregatePaginate(
     Subscription.aggregate(pipeline),
@@ -110,7 +107,6 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
 
 const getSubscribedChannels = asyncHandler(async (req, res) => {
   const { subscriberId } = req.params;
-  const { page = 1, limit = 10 } = req.query;
 
   if (!isValidObjectId(subscriberId)) {
     throw new ApiError(400, "Invalid user id");
@@ -143,10 +139,7 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
     },
   ];
 
-  const options = {
-    page: Math.max(1, parseInt(page, 10) || 1),
-    limit: Math.min(50, Math.max(1, parseInt(limit, 10) || 10)),
-  };
+  const options = getPaginationOptions(req.query);
 
   const result = await Subscription.aggregatePaginate(
     Subscription.aggregate(pipeline),

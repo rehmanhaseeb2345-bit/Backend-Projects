@@ -23,12 +23,14 @@ import {
   updateAccountDetailsSchema,
 } from "../validators/user.validator.js";
 import { verifyJWT, verifyJWTOptional } from "../middlewares/auth.middleware.js";
+import { authLimiter } from "../middlewares/rateLimit.middleware.js";
 
 const router = Router();
 
 // Public routes
 router.post(
   "/register",
+  authLimiter,
   uploadImage.fields([
     { name: "avatar", maxCount: 1 },
     { name: "coverImage", maxCount: 1 },
@@ -38,9 +40,9 @@ router.post(
   registerUser,
 );
 
-router.post("/login", validateMiddleware(loginUserSchema), loginUser);
+router.post("/login", authLimiter, validateMiddleware(loginUserSchema), loginUser);
 
-router.post("/refresh-token", refreshAccessToken);
+router.post("/refresh-token", authLimiter, refreshAccessToken);
 
 // Secured routes
 router.post("/logout", verifyJWT, logoutUser);

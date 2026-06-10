@@ -5,6 +5,7 @@ import { Like } from "../models/like.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { getPaginationOptions } from "../utils/pagination.js";
 
 const createTweet = asyncHandler(async (req, res) => {
   const { content } = req.body;
@@ -21,7 +22,6 @@ const createTweet = asyncHandler(async (req, res) => {
 
 const getUserTweets = asyncHandler(async (req, res) => {
   const { userId } = req.params;
-  const { page = 1, limit = 10 } = req.query;
 
   if (!isValidObjectId(userId)) {
     throw new ApiError(400, "Invalid user id");
@@ -47,10 +47,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
     { $unwind: "$owner" },
   ];
 
-  const options = {
-    page: Math.max(1, parseInt(page, 10) || 1),
-    limit: Math.min(50, Math.max(1, parseInt(limit, 10) || 10)),
-  };
+  const options = getPaginationOptions(req.query);
 
   const result = await Tweet.aggregatePaginate(
     Tweet.aggregate(pipeline),

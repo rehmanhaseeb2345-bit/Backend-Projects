@@ -5,6 +5,14 @@ import { validPng } from "../fixtures/files.js";
 let counter = 0;
 const unique = () => `${Date.now()}_${process.pid}_${counter++}`;
 
+// Auth tokens are only ever sent via httpOnly cookies (not in JSON bodies),
+// so tests that need the raw token value extract it from Set-Cookie.
+export const extractCookieValue = (cookies, name) => {
+  const cookie = (cookies || []).find((c) => c.startsWith(`${name}=`));
+  if (!cookie) return undefined;
+  return cookie.split(";")[0].slice(name.length + 1);
+};
+
 export const buildUserPayload = (overrides = {}) => {
   const id = unique();
   return {
@@ -58,8 +66,8 @@ export const registerAndLogin = async (overrides = {}) => {
   return {
     user: loginRes.body.data.user,
     cookies,
-    accessToken: loginRes.body.data.accessToken,
-    refreshToken: loginRes.body.data.refreshToken,
+    accessToken: extractCookieValue(cookies, "accessToken"),
+    refreshToken: extractCookieValue(cookies, "refreshToken"),
     credentials: data,
   };
 };

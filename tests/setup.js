@@ -12,6 +12,7 @@ process.env.REFRESH_TOKEN_EXPIRY = "7d";
 process.env.CLOUDINARY_CLOUD_NAME = "test-cloud";
 process.env.CLOUDINARY_API_KEY = "test-api-key";
 process.env.CLOUDINARY_API_SECRET = "test-api-secret";
+process.env.DISABLE_RATE_LIMIT = "true";
 
 fs.mkdirSync("./temp/uploads", { recursive: true });
 

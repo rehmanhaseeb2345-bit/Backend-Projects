@@ -3,6 +3,7 @@ import { Subscription } from "../models/subscription.model.js";
 import { Like } from "../models/like.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { getPaginationOptions } from "../utils/pagination.js";
 
 const getChannelStats = asyncHandler(async (req, res) => {
   const videoStats = await Video.aggregate([
@@ -40,17 +41,12 @@ const getChannelStats = asyncHandler(async (req, res) => {
 });
 
 const getChannelVideos = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-
   const pipeline = [
     { $match: { owner: req.user._id } },
     { $sort: { createdAt: -1 } },
   ];
 
-  const options = {
-    page: Math.max(1, parseInt(page, 10) || 1),
-    limit: Math.min(50, Math.max(1, parseInt(limit, 10) || 10)),
-  };
+  const options = getPaginationOptions(req.query);
 
   const result = await Video.aggregatePaginate(
     Video.aggregate(pipeline),

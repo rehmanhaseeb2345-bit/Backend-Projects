@@ -59,8 +59,8 @@ describe("GET /api/v1/playlists/user/:userId", () => {
     const res = await request(app).get(`/api/v1/playlists/user/${user._id}`);
 
     expect(res.statusCode).toBe(200);
-    expect(res.body.data.length).toBe(1);
-    expect(res.body.data[0].videoCount).toBe(0);
+    expect(res.body.data.docs.length).toBe(1);
+    expect(res.body.data.docs[0].videoCount).toBe(0);
   });
 });
 

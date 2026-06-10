@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { app, request, registerUser, registerAndLogin, buildUserPayload } from "../helpers/auth.js";
+import { app, request, registerUser, registerAndLogin, buildUserPayload, extractCookieValue } from "../helpers/auth.js";
 import { validPng, validJpeg } from "../fixtures/files.js";
 
 describe("POST /api/v1/users/register", () => {
@@ -103,8 +103,8 @@ describe("POST /api/v1/users/login", () => {
       .send({ username: data.username, password: data.password });
 
     expect(loginRes.statusCode).toBe(200);
-    expect(loginRes.body.data.accessToken).toBeTruthy();
-    expect(loginRes.body.data.refreshToken).toBeTruthy();
+    expect(loginRes.body.data).not.toHaveProperty("accessToken");
+    expect(loginRes.body.data).not.toHaveProperty("refreshToken");
     expect(loginRes.body.data.user.password).toBeUndefined();
 
     const cookies = loginRes.headers["set-cookie"].join(";");
@@ -210,9 +210,10 @@ describe("POST /api/v1/users/refresh-token", () => {
       .send({ refreshToken });
 
     expect(res.statusCode).toBe(200);
-    expect(res.body.data.accessToken).toBeTruthy();
-    expect(res.body.data.refreshToken).toBeTruthy();
-    expect(res.body.data.refreshToken).not.toBe(refreshToken);
+    const newRefreshToken = extractCookieValue(res.headers["set-cookie"], "refreshToken");
+    expect(extractCookieValue(res.headers["set-cookie"], "accessToken")).toBeTruthy();
+    expect(newRefreshToken).toBeTruthy();
+    expect(newRefreshToken).not.toBe(refreshToken);
   });
 
   it("rejects reuse of a rotated-out refresh token", async () => {
