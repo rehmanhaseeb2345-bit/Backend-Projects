@@ -166,9 +166,20 @@ const getVideoById = asyncHandler(async (req, res) => {
     video.views += 1;
   }
 
+  const [likesCount, existingLike] = await Promise.all([
+    Like.countDocuments({ video: videoId }),
+    req.user
+      ? Like.exists({ video: videoId, likedBy: req.user._id })
+      : Promise.resolve(null),
+  ]);
+
+  const videoData = video.toObject();
+  videoData.likesCount = likesCount;
+  videoData.isLiked = !!existingLike;
+
   return res
     .status(200)
-    .json(new ApiResponse(200, video, "Video fetched successfully"));
+    .json(new ApiResponse(200, videoData, "Video fetched successfully"));
 });
 
 const updateVideo = asyncHandler(async (req, res) => {

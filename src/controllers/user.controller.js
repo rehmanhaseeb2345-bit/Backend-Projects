@@ -13,6 +13,7 @@ import {
   getRefreshTokenCookieOptions,
   getClearCookieOptions,
 } from "../utils/cookieOptions.js";
+import { getPaginationOptions } from "../utils/pagination.js";
 import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -446,6 +447,51 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     );
 });
 
+const getWatchHistory = asyncHandler(async (req, res) => {
+  // watchHistory is appended via $addToSet (no per-entry timestamp), so the
+  // array index is the watch order: unwind with the index and sort it
+  // descending to get most-recently-watched first.
+  const pipeline = [
+    { $match: { _id: req.user._id } },
+    { $unwind: { path: "$watchHistory", includeArrayIndex: "watchIndex" } },
+    { $sort: { watchIndex: -1 } },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "video",
+        pipeline: [
+          { $match: { isPublished: true } },
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                { $project: { username: 1, fullname: 1, avatar: 1 } },
+              ],
+            },
+          },
+          { $unwind: "$owner" },
+        ],
+      },
+    },
+    // Drops entries whose video was deleted or unpublished since being watched.
+    { $unwind: "$video" },
+    { $replaceRoot: { newRoot: "$video" } },
+  ];
+
+  const options = getPaginationOptions(req.query);
+
+  const result = await User.aggregatePaginate(User.aggregate(pipeline), options);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, result, "Watch history fetched successfully"));
+});
+
 export {
   registerUser,
   loginUser,
@@ -457,4 +503,5 @@ export {
   updateUserAvatar,
   updateUserCoverImage,
   getUserChannelProfile,
+  getWatchHistory,
 };

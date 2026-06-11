@@ -5,7 +5,7 @@ import {
   updateTweet,
   deleteTweet,
 } from "../controllers/tweet.controller.js";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { verifyJWT, verifyJWTOptional } from "../middlewares/auth.middleware.js";
 import { validateMiddleware } from "../middlewares/validate.middleware.js";
 import {
   createTweetSchema,
@@ -14,7 +14,7 @@ import {
 
 const router = Router();
 
-router.get("/user/:userId", getUserTweets);
+router.get("/user/:userId", verifyJWTOptional, getUserTweets);
 
 router.post(
   "/",

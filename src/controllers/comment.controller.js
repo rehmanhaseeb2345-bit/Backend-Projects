@@ -26,6 +26,8 @@ const getVideoComments = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Video not found");
   }
 
+  const requesterId = req.user?._id ?? null;
+
   const pipeline = [
     { $match: { video: new mongoose.Types.ObjectId(videoId) } },
     { $sort: { createdAt: -1 } },
@@ -39,6 +41,21 @@ const getVideoComments = asyncHandler(async (req, res) => {
       },
     },
     { $unwind: "$owner" },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "comment",
+        as: "likes",
+      },
+    },
+    {
+      $addFields: {
+        likesCount: { $size: "$likes" },
+        isLiked: { $in: [requesterId, "$likes.likedBy"] },
+      },
+    },
+    { $project: { likes: 0 } },
   ];
 
   const options = getPaginationOptions(req.query);

@@ -32,6 +32,8 @@ const getUserTweets = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found");
   }
 
+  const requesterId = req.user?._id ?? null;
+
   const pipeline = [
     { $match: { owner: new mongoose.Types.ObjectId(userId) } },
     { $sort: { createdAt: -1 } },
@@ -45,6 +47,21 @@ const getUserTweets = asyncHandler(async (req, res) => {
       },
     },
     { $unwind: "$owner" },
+    {
+      $lookup: {
+        from: "likes",
+        localField: "_id",
+        foreignField: "tweet",
+        as: "likes",
+      },
+    },
+    {
+      $addFields: {
+        likesCount: { $size: "$likes" },
+        isLiked: { $in: [requesterId, "$likes.likedBy"] },
+      },
+    },
+    { $project: { likes: 0 } },
   ];
 
   const options = getPaginationOptions(req.query);

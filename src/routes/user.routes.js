@@ -10,6 +10,7 @@ import {
   updateUserAvatar,
   updateUserCoverImage,
   getUserChannelProfile,
+  getWatchHistory,
 } from "../controllers/user.controller.js";
 import {
   uploadImage,
@@ -55,6 +56,8 @@ router.post(
 );
 
 router.get("/me", verifyJWT, getMe);
+
+router.get("/history", verifyJWT, getWatchHistory);
 
 router.patch(
   "/update-account",
