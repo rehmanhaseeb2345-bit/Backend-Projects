@@ -20,6 +20,23 @@ Cloudinary for media storage, and Zod for request validation.
 3. `npm run dev` — starts the server with nodemon.
 4. `npm test` — runs the full test suite (uses an in-memory MongoDB, no real DB needed).
 
+For frontend development, also run `npm run dev` inside `client/` (Vite on port 5173,
+proxying `/api` to the backend).
+
+## Production build & run
+
+```sh
+npm ci            # backend deps
+npm run build     # installs client deps + builds client/dist
+NODE_ENV=production npm start
+```
+
+In production the Express server serves the built frontend from `client/dist` on the
+same origin as the API (required by the `sameSite: "strict"` auth cookies), with an
+SPA fallback for client-side routes. Set `TRUST_PROXY=true` when running behind a
+hosting platform's load balancer (Render, Railway, etc.) so rate limiting sees real
+client IPs.
+
 ### Environment variables
 
 | Variable | Description |

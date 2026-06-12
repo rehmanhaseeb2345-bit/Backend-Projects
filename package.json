@@ -13,7 +13,9 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev": "nodemon -r dotenv/config --experimental-json-modules index.js"
+    "dev": "nodemon -r dotenv/config --experimental-json-modules index.js",
+    "build": "npm --prefix client ci && npm --prefix client run build",
+    "start": "node index.js"
   },
   "devDependencies": {
     "cross-env": "^10.1.0",

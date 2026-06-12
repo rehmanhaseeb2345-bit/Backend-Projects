@@ -1,3 +1,4 @@
+import path from "node:path";
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -21,7 +22,21 @@ const app = express();
 // login logging). Disabled by default for direct/local deployments.
 app.set("trust proxy", process.env.TRUST_PROXY === "true" ? 1 : false);
 
-app.use(helmet());
+// CSP must allow the app's external resources: Cloudinary media (thumbnails,
+// avatars, videos) and Google Fonts. Everything else stays same-origin.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        "img-src": ["'self'", "data:", "https://res.cloudinary.com"],
+        "media-src": ["'self'", "blob:", "https://res.cloudinary.com"],
+        "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        "font-src": ["'self'", "https://fonts.gstatic.com"],
+      },
+    },
+  }),
+);
 app.disable("x-powered-by");
 
 app.use(express.json({ limit: "16kb" }));
@@ -52,6 +67,20 @@ app.use("/api/v1/likes", likeRouter);
 app.use("/api/v1/playlists", playlistRouter);
 app.use("/api/v1/tweets", tweetRouter);
 app.use("/api/v1/dashboard", dashboardRouter);
+
+// Production: serve the built frontend from the same origin as the API
+// (required by the sameSite: "strict" auth cookies). Any GET that isn't an
+// API route falls back to index.html so client-side routing works on reload.
+if (process.env.NODE_ENV === "production") {
+  const clientDist = path.resolve("client/dist");
+  app.use(express.static(clientDist));
+  app.use((req, res, next) => {
+    if (req.method !== "GET" || req.path.startsWith("/api/")) {
+      return next();
+    }
+    res.sendFile(path.join(clientDist, "index.html"));
+  });
+}
 
 app.use((req, res) => {
   res.status(404).json({
