@@ -10,7 +10,7 @@ import SaveToPlaylistModal from "../components/playlists/SaveToPlaylistModal.jsx
 import LikeButton from "../components/ui/LikeButton.jsx";
 import Spinner from "../components/ui/Spinner.jsx";
 import { usePageTitle } from "../lib/usePageTitle.js";
-import { formatViews, formatDate } from "../lib/format.js";
+import { formatViews, formatDate, toHttps } from "../lib/format.js";
 
 const Watch = () => {
   const { videoId } = useParams();
@@ -99,8 +99,8 @@ const Watch = () => {
     <div className="watch-page">
       <video
         className="watch-player"
-        src={video.videoFile?.url}
-        poster={video.thumbnail?.url}
+        src={toHttps(video.videoFile?.url)}
+        poster={toHttps(video.thumbnail?.url)}
         controls
         autoPlay
       />

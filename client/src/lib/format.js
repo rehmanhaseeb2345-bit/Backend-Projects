@@ -1,5 +1,11 @@
 // Display helpers for video metadata.
 
+// Videos uploaded before the backend switched to Cloudinary's https `secure_url`
+// still have http:// links stored. The app's HTTPS CSP (media-src) blocks http
+// media, so upgrade the scheme when handing the URL to the <video> element.
+export const toHttps = (url) =>
+  typeof url === "string" ? url.replace(/^http:\/\//i, "https://") : url;
+
 export const formatDuration = (seconds) => {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
   const total = Math.round(seconds);

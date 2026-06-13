@@ -16,6 +16,12 @@ const uploadOnCloudinary = async (localFilePath) => {
       resource_type: "auto",
     });
 
+    // Cloudinary's `url` is http://. Under the app's HTTPS Content-Security-Policy
+    // (media-src allows only https://res.cloudinary.com), an http video URL is
+    // blocked by the browser. Always expose the secure (https) URL so callers
+    // that read `.url` store an https link.
+    response.url = response.secure_url;
+
     fs.unlinkSync(localFilePath);
     return response;
   } catch (error) {
