@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import e from "express";
 import morgan from "morgan";
 import router from "./routes/auth.route.js";

@@ -1,6 +1,13 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import User from "../models/user.model.js";
+import SessionModel from "../models/session.model.js";
+import {
+  signAccessToken,
+  issueRefreshSession,
+  tokenMatchesHash,
+  refreshCookieOptions,
+} from "../utils/auth.js";
 
 export const register = async (req, res) => {
   try {
@@ -8,6 +15,14 @@ export const register = async (req, res) => {
 
     if (!username || !email || !password) {
       return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Must validate the raw password here: the schema's minlength only ever
+    // sees the bcrypt hash (always 60 chars), so it can't enforce length.
+    if (password.length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters long" });
     }
 
     const existingUser = await User.findOne({ $or: [{ username }, { email }] });
@@ -25,28 +40,12 @@ export const register = async (req, res) => {
       password: hashedPassword,
     });
 
-    const Acesstoken = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
-      expiresIn: "15m",
-    });
-
-    const refreshToken = jwt.sign(
-      { id: newUser._id },
-      process.env.JWT_REFRESH_SECRET,
-      {
-        expiresIn: "7d",
-      },
-    );
-
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    await issueRefreshSession(newUser, req, res);
+    const accessToken = signAccessToken(newUser._id);
 
     return res.status(201).json({
       message: "User registered successfully",
-      token: Acesstoken,
+      token: accessToken,
       user: {
         id: newUser._id,
         username: newUser.username,
@@ -60,50 +59,75 @@ export const register = async (req, res) => {
         .json({ message: "Username or email already exists" });
     }
 
+    if (error.name === "ValidationError") {
+      const message = Object.values(error.errors)
+        .map((e) => e.message)
+        .join(", ");
+      return res.status(400).json({ message });
+    }
+
     console.error("Register error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
 
 export const getUser = async (req, res) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ message: "No token provided" });
-  }
-
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
+    const user = await User.findById(req.userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
     return res.status(200).json({ user });
   } catch (error) {
     console.error("Get user error:", error);
-    return res.status(401).json({ message: "Invalid token" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 
 export const refreshToken = async (req, res) => {
-  const refreshToken = req.cookies.refreshToken;
-  if (!refreshToken) {
+  const token = req.cookies.refreshToken;
+  if (!token) {
     return res.status(401).json({ message: "No refresh token provided" });
   }
 
+  let decoded;
   try {
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-    const user = await User.findById(decoded.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+  } catch (error) {
+    res.clearCookie("refreshToken", refreshCookieOptions);
+    return res.status(401).json({ message: "Invalid refresh token" });
+  }
 
-    const newAccessToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "15m",
+  try {
+    // The token must match a stored, non-revoked session. This is what makes
+    // refresh tokens revocable and lets us detect reuse of an old token.
+    const session = await SessionModel.findOne({
+      _id: decoded.sid,
+      user: decoded.id,
+      revoked: false,
     });
 
-    return res.status(200).json({ token: newAccessToken });
+    if (!session || !tokenMatchesHash(token, session.tokenHash)) {
+      res.clearCookie("refreshToken", refreshCookieOptions);
+      return res.status(401).json({ message: "Invalid refresh token" });
+    }
+
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      res.clearCookie("refreshToken", refreshCookieOptions);
+      return res.status(401).json({ message: "Invalid refresh token" });
+    }
+
+    // Rotate: invalidate the used session and issue a fresh one.
+    session.revoked = true;
+    await session.save();
+
+    await issueRefreshSession(user, req, res);
+    const accessToken = signAccessToken(user._id);
+
+    return res.status(200).json({ token: accessToken });
   } catch (error) {
     console.error("Refresh token error:", error);
-    return res.status(401).json({ message: "Invalid refresh token" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
