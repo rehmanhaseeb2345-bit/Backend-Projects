@@ -85,7 +85,7 @@ export const getUser = async (req, res) => {
 };
 
 export const refreshToken = async (req, res) => {
-  const token = req.cookies.refreshToken;
+  const token = req.cookies?.refreshToken;
   if (!token) {
     return res.status(401).json({ message: "No refresh token provided" });
   }
@@ -99,8 +99,6 @@ export const refreshToken = async (req, res) => {
   }
 
   try {
-    // The token must match a stored, non-revoked session. This is what makes
-    // refresh tokens revocable and lets us detect reuse of an old token.
     const session = await SessionModel.findOne({
       _id: decoded.sid,
       user: decoded.id,
@@ -130,4 +128,28 @@ export const refreshToken = async (req, res) => {
     console.error("Refresh token error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
+};
+
+export const logout = async (req, res) => {
+  const token = req.cookies?.refreshToken;
+
+  // Logout is idempotent: always clear the cookie.
+  res.clearCookie("refreshToken", refreshCookieOptions);
+
+  if (!token) {
+    return res.status(200).json({ message: "Logged out" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    // Revoke the session so this refresh token can never be used again.
+    await SessionModel.updateOne(
+      { _id: decoded.sid, user: decoded.id },
+      { revoked: true },
+    );
+  } catch (error) {
+    // Token already invalid/expired — nothing to revoke; cookie is cleared.
+  }
+
+  return res.status(200).json({ message: "Logged out" });
 };
