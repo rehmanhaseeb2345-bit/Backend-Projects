@@ -133,7 +133,6 @@ export const refreshToken = async (req, res) => {
 export const logout = async (req, res) => {
   const token = req.cookies?.refreshToken;
 
-  // Logout is idempotent: always clear the cookie.
   res.clearCookie("refreshToken", refreshCookieOptions);
 
   if (!token) {
@@ -142,13 +141,13 @@ export const logout = async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-    // Revoke the session so this refresh token can never be used again.
+
     await SessionModel.updateOne(
       { _id: decoded.sid, user: decoded.id },
       { revoked: true },
     );
   } catch (error) {
-    // Token already invalid/expired — nothing to revoke; cookie is cleared.
+    return res.status(300).json({ message: "Logged out" });
   }
 
   return res.status(200).json({ message: "Logged out" });
