@@ -16,16 +16,10 @@ export const signAccessToken = (userId) =>
     expiresIn: env.ACCESS_TOKEN_TTL,
   });
 
-// NOTE: bcrypt silently truncates input at 72 bytes, and a refresh JWT is
-// longer than that. We always look a session up by its unique `sid` first and
-// only then compare, so the truncation risk is scoped to a single session
-// rather than allowing cross-session collisions.
 export const hashToken = (token) => bcrypt.hash(token, 10);
 
 export const compareToken = (token, hash) => bcrypt.compare(token, hash);
 
-// Creates a refresh-token session, stores only its (bcrypt) hash, and sets the
-// raw token as an httpOnly cookie. Returns the session id for callers that need it.
 export const issueRefreshSession = async (user, req, res) => {
   const sessionId = new mongoose.Types.ObjectId();
 

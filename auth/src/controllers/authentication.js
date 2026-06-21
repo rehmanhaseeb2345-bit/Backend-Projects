@@ -46,7 +46,10 @@ export const register = asyncHandler(async (req, res) => {
 export const login = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
 
-  // password has `select: false` in the schema, so it must be opted back in.
+  if ((!username && !email) || !password) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+
   const user = await User.findOne({
     $or: [{ username }, { email }],
   }).select("+password");
@@ -135,7 +138,9 @@ export const logout = asyncHandler(async (req, res) => {
         { revoked: true },
       );
     } catch (error) {
-      // Invalid/expired token — cookie is already cleared, so logout still succeeds.
+      return res
+        .status(401)
+        .json({ message: "Logged out", error: error.message });
     }
   }
 
@@ -152,7 +157,9 @@ export const logoutAll = asyncHandler(async (req, res) => {
       const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET);
       await SessionModel.updateMany({ user: decoded.id }, { revoked: true });
     } catch (error) {
-      // Invalid/expired token — cookie is already cleared, so logout still succeeds.
+      return res
+        .status(401)
+        .json({ message: "Logged out", error: error.message });
     }
   }
 

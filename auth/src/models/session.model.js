@@ -7,7 +7,6 @@ const sessionSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    // SHA-256 hash of the refresh-token JWT — never store the raw token.
     tokenHash: {
       type: String,
       required: true,
@@ -22,7 +21,6 @@ const sessionSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    // Used by the TTL index below to auto-remove stale sessions.
     expiresAt: {
       type: Date,
       required: true,
@@ -31,8 +29,6 @@ const sessionSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// MongoDB removes documents once `expiresAt` passes, so the collection
-// doesn't grow without bound.
 sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 const SessionModel = mongoose.model("Session", sessionSchema);
