@@ -1,3 +1,21 @@
+// Generic zod validator. Pass a schema shaped like
+// z.object({ body: ..., params: ..., query: ... }) and it validates the
+// matching parts of the request, returning 400 with joined messages on failure.
+export const validate = (schema) => (req, res, next) => {
+  const result = schema.safeParse({
+    body: req.body,
+    params: req.params,
+    query: req.query,
+  });
+
+  if (!result.success) {
+    const message = result.error.issues.map((i) => i.message).join(", ");
+    return res.status(400).json({ message });
+  }
+
+  next();
+};
+
 // Lightweight body validation. Keeps the presence/length checks out of the
 // controllers so they only deal with business logic.
 

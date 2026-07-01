@@ -11,6 +11,11 @@ import {
   refreshCookieOptions,
 } from "../services/token.service.js";
 
+import {
+  requestEmailVerification,
+  verifyEmailCode,
+} from "../services/verification.service.js";
+
 export const register = asyncHandler(async (req, res) => {
   const { username, email, password } = req.body;
 
@@ -77,11 +82,8 @@ export const login = asyncHandler(async (req, res) => {
 });
 
 export const getUser = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.userId);
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
-  }
-  return res.status(200).json({ user });
+  // requireAuth already loaded and attached the user.
+  return res.status(200).json({ user: req.user });
 });
 
 export const refreshToken = asyncHandler(async (req, res) => {
@@ -138,9 +140,7 @@ export const logout = asyncHandler(async (req, res) => {
         { revoked: true },
       );
     } catch (error) {
-      return res
-        .status(401)
-        .json({ message: "Logged out", error: error.message });
+      // Invalid/expired token — cookie is already cleared, so logout still succeeds.
     }
   }
 
@@ -157,11 +157,24 @@ export const logoutAll = asyncHandler(async (req, res) => {
       const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET);
       await SessionModel.updateMany({ user: decoded.id }, { revoked: true });
     } catch (error) {
-      return res
-        .status(401)
-        .json({ message: "Logged out", error: error.message });
+      // Invalid/expired token — cookie is already cleared, so logout still succeeds.
     }
   }
 
   return res.status(200).json({ message: "Logged out from all sessions" });
+});
+
+export const requestEmailOtp = asyncHandler(async (req, res) => {
+  await requestEmailVerification(req.user);
+
+  // Endpoint is behind requireAuth (user's own account), so a direct message
+  // is fine — the "already verified" / cooldown cases surface as 400 / 429.
+  res.status(200).json({
+    message: "A verification code has been sent to your email.",
+  });
+});
+
+export const verifyEmailOtp = asyncHandler(async (req, res) => {
+  await verifyEmailCode(req.user.id, req.body.code);
+  res.status(200).json({ message: "Email verified successfully." });
 });

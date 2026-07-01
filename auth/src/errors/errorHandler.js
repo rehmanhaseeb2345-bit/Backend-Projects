@@ -22,6 +22,18 @@ export const errorHandler = (err, req, res, next) => {
     return res.status(401).json({ message: "Invalid or expired token" });
   }
 
+  // Zod validation errors (in case one bubbles up outside the validate middleware).
+  if (err.name === "ZodError") {
+    const message = err.issues.map((i) => i.message).join(", ");
+    return res.status(400).json({ message });
+  }
+
+  // Errors thrown by services with an explicit HTTP status (e.g. httpError()).
+  const status = err.status ?? err.statusCode;
+  if (status && status >= 400 && status < 500) {
+    return res.status(status).json({ message: err.message });
+  }
+
   console.error("Unhandled error:", err);
   return res.status(500).json({ message: "Internal server error" });
 };

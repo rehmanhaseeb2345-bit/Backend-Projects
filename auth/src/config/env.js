@@ -31,6 +31,8 @@ const env = Object.freeze({
   REFRESH_TOKEN_TTL,
   REFRESH_TOKEN_TTL_MS: refreshTtlMs,
   isProduction: process.env.NODE_ENV === "production",
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
+  EMAIL_FROM: process.env.EMAIL_FROM,
 });
 
 export default env;
